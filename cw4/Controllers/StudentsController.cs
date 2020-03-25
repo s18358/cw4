@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using cw4.DAL;
 using cw4.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Data;
+using System.Data.SqlClient;
 
 namespace cw4.Controllers
 {
@@ -14,55 +15,54 @@ namespace cw4.Controllers
     [Route("api/students")]
     public class StudentsController : ControllerBase
     {
-        public string GetStudents()
-        {
-            return "Kowalski, Nowak";
-        }
-        [HttpGet("{id}")]
-        public IActionResult GetStudenst(int id)
-        {
-            if (id == 1)
-            {
-                return Ok("Kowalski");
-            }
-            else if (id == 2)
-            {
-                return Ok("Nowak");
-            }
-
-            return NotFound("Nie ma studenta");
-        }
-
-        [HttpPost]
-        public IActionResult CreateStudent(Student student)
-        {
-            student.IndexNumber = $"s{new Random().Next(1, 2000)}";
-            return Ok(student);
-        }
-
-        [HttpPut("{id}")]
-        public IActionResult UpdateStudent(int id)
-        {
-            return Ok("Aktualizacja zakonczona");
-        }
-
-        [HttpDelete("{id}")]
-        public IActionResult DeleteStudent(int id)
-        {
-            return Ok("Student o id: " + id + " zostal usuniety");
-        }
-
-        private readonly IDbService _dbService;
-        public StudentsController(IDbService db)
-        {
-            _dbService = db;
-        }
+        private const string ConString = "Data Source=db-mssql;Initial Catalog=pgago;Integrated Security=True";
 
         [HttpGet]
-        public IActionResult GetStudents(string orderBy)
+        public IActionResult GetStudent()
         {
-            return Ok(_dbService.GetStudents());
+            var list = new List<Student>();
+            using (SqlConnection con = new SqlConnection(ConString))
+            using (SqlCommand com = new SqlCommand())
+            {
+                com.Connection = con;
+                com.CommandText = "select * from students";
+                con.Open();
+                SqlDataReader dr = com.ExecuteReader();
+                while (dr.Read())
+                {
+                    var st = new Student();
+                    st.IndexNumber = dr["IndexNmumber"].ToString();
+                    st.FirstName = dr["FirstName"].ToString();
+                    st.LastName = dr["LastName"].ToString();
+                    list.Add(st);
+                }
+            }
+                return Ok(list);
         }
+
+        [HttpGet("{indexNumber}")]
+        public IActionResult GetStudent(string indexNumber)
+        {
+            var list = new List<Student>();
+            using (SqlConnection con = new SqlConnection(ConString))
+            using (SqlCommand com = new SqlCommand())
+            {
+                com.Connection = con;
+                com.CommandText = "select * from students where indexnumber='"+indexNumber+"'";
+                con.Open();
+                var dr = com.ExecuteReader();
+                if (dr.Read())
+                {
+                    var st = new Student();
+                    st.IndexNumber = dr["IndexNmumber"].ToString();
+                    st.FirstName = dr["FirstName"].ToString();
+                    st.LastName = dr["LastName"].ToString();
+                    return Ok();
+                }
+            }
+            return NotFound();
+        }
+
 
     }
 }
